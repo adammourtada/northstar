@@ -21,3 +21,6 @@ Organizations often manage strategy, projects, performance, risk, and resources 
 - Resource and capacity visibility
 - Management intelligence
 - Executive reporting
+## Documentation
+
+- [Product Requirements](docs/product-requirements.md)

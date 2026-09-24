@@ -25,3 +25,4 @@ Organizations often manage strategy, projects, performance, risk, and resources 
 
 - [Product Requirements](docs/product-requirements.md)
 - [Technical Architecture](docs/architecture.md)
+- [Database Schema](docs/database-schema.md)

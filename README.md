@@ -24,3 +24,4 @@ Organizations often manage strategy, projects, performance, risk, and resources 
 ## Documentation
 
 - [Product Requirements](docs/product-requirements.md)
+- [Technical Architecture](docs/architecture.md)

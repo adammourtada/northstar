@@ -1,0 +1,119 @@
+# Environment files and local secrets (at any directory depth)
+.env
+.env.local
+.env.*
+!.env.example
+.secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Node.js dependencies and package-manager caches
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Next.js, TypeScript, and deployment output
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.vercel/
+.turbo/
+
+# Build artifacts and caches
+build/
+dist/
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+tmp/
+temp/
+
+# Python / FastAPI environments, bytecode, packaging, and tooling
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+__pypackages__/
+*.egg-info/
+*.egg
+.eggs/
+pip-wheel-metadata/
+.Python
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.tox/
+.nox/
+.ipynb_checkpoints/
+
+# Test reports and coverage (pytest, Vitest, Playwright)
+.pytest_cache/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+coverage.xml
+junit.xml
+test-results/
+playwright-report/
+playwright/.cache/
+playwright/.auth/
+blob-report/
+
+# Logs and process files
+logs/
+*.log
+*.pid
+*.pid.lock
+*.seed
+
+# Local databases and SQLite sidecar files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Editor settings and temporary files
+.vscode/
+*.code-workspace
+.idea/
+*.swp
+*.swo
+*~
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/

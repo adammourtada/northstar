@@ -63,3 +63,65 @@ northstar/
 ```
 
 Empty directories contain `.gitkeep` placeholders so Git preserves the intended structure. Application code, migrations, tests, and workflows will be introduced through future issues.
+
+## Local Development
+
+Issue #10 adds the runnable frontend and backend described below. The earlier foundation-stage descriptions above are retained as project history. Both apps run independently without environment variables or external services; `.env.example` remains a list of planned integrations.
+
+### Frontend setup and start
+
+Install Node.js 20.9+ (a current LTS release is recommended), including npm. In PowerShell, from the repository root:
+
+```powershell
+cd apps/web
+npm ci
+npm run dev
+```
+
+Open http://localhost:3000 to see the minimal NORTHSTAR development page. Stop the server with Ctrl+C.
+
+Run the frontend checks from `apps/web`:
+
+```powershell
+npm run lint
+npm run typecheck
+npm run build
+```
+
+To serve the production build locally, run `npm start` after `npm run build`.
+If PowerShell blocks `npm.ps1`, use `npm.cmd` for these commands.
+
+### Backend setup and start on Windows
+
+Install Python 3.12+ with the Windows Python launcher. In a separate PowerShell terminal, from the repository root:
+
+```powershell
+cd services/api
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+If Python is available as `python` rather than `py`, use `python -m venv .venv`.
+These commands use the virtual environment directly, so activation and execution-policy changes are unnecessary. Stop the server with Ctrl+C.
+
+The API runs at http://127.0.0.1:8000, with interactive documentation at http://127.0.0.1:8000/docs.
+
+### Test the health endpoint
+
+With the backend running, use another PowerShell terminal:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health | ConvertTo-Json
+```
+
+Expected HTTP 200 response:
+
+```json
+{
+  "status": "ok",
+  "service": "northstar-api"
+}
+```
+
+Dependencies, build output, Python caches, and `.venv` are excluded by the root `.gitignore`.

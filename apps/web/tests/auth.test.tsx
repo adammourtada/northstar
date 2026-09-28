@@ -9,7 +9,9 @@ const auth = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ auth })) }));
 vi.mock("next/navigation", () => ({ redirect: (path: string) => { throw new Error(`redirect:${path}`); } }));
-vi.mock("next/headers", () => ({ headers: async () => new Headers({ origin: auth.origin }) }));
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/organizations", () => ({ listOrganizations: async () => [{ id: "workspace", name: "Workspace", slug: "workspace", role: "owner" }] }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ origin: auth.origin }), cookies: async () => ({ get: () => undefined }) }));
 
 import Login from "@/app/login/page";
 import Signup from "@/app/signup/page";

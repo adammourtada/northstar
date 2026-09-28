@@ -5,7 +5,7 @@ export async function getIdentity() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims.sub) return null;
-  return { email: typeof data.claims.email === "string" ? data.claims.email : "" };
+  return { id: data.claims.sub, email: typeof data.claims.email === "string" ? data.claims.email : "" };
 }
 
 export async function requireIdentity() {

@@ -140,7 +140,9 @@ The first SQL migration is available under `database/migrations`. It defines
 profiles, organizations, memberships, and a restricted organization-creation RPC.
 It has **not** been automatically applied to any remote Supabase project.
 See the [database foundation guide](database/README.md) for permissions, lifecycle
-decisions, and the manual validation checklist. Organization UI is not implemented.
+decisions, and the manual validation checklist. Minimal organization onboarding and
+workspace selection are available; see the
+[frontend onboarding guide](apps/web/README.md#organization-onboarding-and-workspaces).
 
 ### Continuous integration
 

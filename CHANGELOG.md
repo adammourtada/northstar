@@ -6,6 +6,7 @@ Notable changes to Northstar will be documented here. No releases have been publ
 
 ### Added
 
+- Authenticated organization onboarding through the secure creation RPC, membership-validated workspace selection, and a minimal organization-aware application shell with offline tests.
 - Organization database foundation migration with profiles/backfill, organizations, membership roles, a secure creation RPC, and tenant-isolating RLS; prepared for manual application only.
 - Initial email/password authentication with signup confirmation, login, logout, SSR session refresh, a protected `/app` proof page, and offline frontend tests.
 - Supabase browser and server client foundation, with local configuration documentation and an offline initialization check.

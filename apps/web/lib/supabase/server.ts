@@ -18,8 +18,8 @@ export async function createClient() {
               cookieStore.set(name, value, options),
             );
           } catch {
-            // Server Components cannot write cookies. Session refresh via
-            // Proxy must be added with authentication before using sessions.
+            // Server Components cannot write cookies. Proxy refreshes the
+            // session and forwards updated cookies before rendering.
           }
         },
       },

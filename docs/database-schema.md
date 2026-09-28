@@ -1,5 +1,18 @@
 # Northstar Initial Database Schema
 
+## Implemented foundation
+
+The one-time migration
+[`202609280001_organization_foundation.sql`](../database/migrations/202609280001_organization_foundation.sql)
+implements only `profiles`, `organizations`, and `organization_members` from the
+design below. It has not been automatically applied to any remote Supabase project.
+Profiles extend `auth.users`; an auth trigger creates new profiles and a
+non-overwriting backfill covers existing users. The secure `create_organization`
+RPC derives the creator from `auth.uid()` and atomically assigns them an `owner`
+membership. RLS isolates tenants, while membership mutation remains restricted.
+See the [foundation guide](../database/README.md) for exact grants, validation,
+indexes, and deletion behavior. Other tables below remain planned.
+
 ## 1. Purpose
 
 This document defines the initial relational database design for Northstar's MVP.

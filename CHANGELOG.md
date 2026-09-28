@@ -6,6 +6,7 @@ Notable changes to Northstar will be documented here. No releases have been publ
 
 ### Added
 
+- Organization database foundation migration with profiles/backfill, organizations, membership roles, a secure creation RPC, and tenant-isolating RLS; prepared for manual application only.
 - Initial email/password authentication with signup confirmation, login, logout, SSR session refresh, a protected `/app` proof page, and offline frontend tests.
 - Supabase browser and server client foundation, with local configuration documentation and an offline initialization check.
 - GitHub Actions CI for frontend lint, type checking, and production builds, plus an automated backend health endpoint test.

@@ -27,3 +27,17 @@ Expected HTTP 200 response:
 
 Interactive API documentation is at http://127.0.0.1:8000/docs.
 Stop the server with Ctrl+C. No environment variables, credentials, or external services are required.
+
+## Automated tests
+
+After creating the virtual environment above, run these commands from `services/api`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest
+```
+
+On macOS or Linux, use `.venv/bin/python` instead of `.\.venv\Scripts\python.exe`.
+The development requirements include the production dependencies, pytest, and httpx.
+The health test uses FastAPI's TestClient in process, so no running server, database, environment variables, or API keys are needed.
+GitHub Actions runs the backend tests with Python 3.13.

@@ -125,3 +125,7 @@ Expected HTTP 200 response:
 ```
 
 Dependencies, build output, Python caches, and `.venv` are excluded by the root `.gitignore`.
+
+### Continuous integration
+
+GitHub Actions validates pull requests targeting `main` and pushes to `main` with independent frontend and backend jobs. The frontend runs ESLint, TypeScript checks, and a production build; the backend runs pytest. No external services or secrets are required. See [backend testing instructions](services/api/README.md#automated-tests) to run the API tests locally.

@@ -251,6 +251,16 @@ Potential future authentication methods include:
 
 ## 9. Multi-Tenant Architecture
 
+The initial database foundation is defined in
+[`database/migrations/202609280001_organization_foundation.sql`](../database/migrations/202609280001_organization_foundation.sql)
+and has not been automatically applied remotely. It adds profiles (including
+existing-user backfill), organizations, and membership roles. Organization creation
+is a restricted RPC that derives identity from Supabase Auth and creates an owner
+membership atomically. RLS uses a private, owner-executed membership helper to avoid
+recursive policies. Direct membership writes and organization UI are deferred;
+the role capabilities described below are planned, not write privileges granted
+by this migration. See the [foundation guide](../database/README.md).
+
 Northstar is designed as a multi-tenant SaaS application.
 
 Multiple organizations will use the same application while maintaining strict separation between their data.

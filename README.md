@@ -134,6 +134,14 @@ local variable names, where to obtain the Project URL and Publishable key, and
 the optional initialization check. Real values belong only in ignored
 `apps/web/.env.local`; never commit that file or expose secret keys in browser code.
 
+### Organization database foundation
+
+The first SQL migration is available under `database/migrations`. It defines
+profiles, organizations, memberships, and a restricted organization-creation RPC.
+It has **not** been automatically applied to any remote Supabase project.
+See the [database foundation guide](database/README.md) for permissions, lifecycle
+decisions, and the manual validation checklist. Organization UI is not implemented.
+
 ### Continuous integration
 
 GitHub Actions validates pull requests targeting `main` and pushes to `main` with independent frontend and backend jobs. The frontend runs ESLint, TypeScript checks, and a production build; the backend runs pytest. No external services or secrets are required. See [backend testing instructions](services/api/README.md#automated-tests) to run the API tests locally.

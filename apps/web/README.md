@@ -100,8 +100,9 @@ customization may be added later for production branding.
    `/auth/confirm` exchanges the returned PKCE authorization code, establishes
    the cookie session, and redirects to `/app`.
    Invalid or expired links redirect to a safe login error message.
-4. `/app` shows only the authenticated email and a Sign out button; it is not a
-   dashboard. Reload to check session persistence. Signed-in visits to `/login`
+4. `/app` requires a valid organization membership (see onboarding below) and shows
+   the organization, role, authenticated email, and Sign out button. Reload to check
+   session persistence. Signed-in visits to `/login`
    and `/signup` redirect to `/app`.
 5. Sign out to clear the current browser session and return to `/login`. Visiting
    `/app` again must redirect to `/login`. Sign back in using email/password.
@@ -110,3 +111,35 @@ customization may be added later for production branding.
 errors, confirmation redirects, sign-out, and cookie forwarding without a live
 Supabase account. Real email delivery and a full browser session require the
 manual smoke test above. Never log confirmation URLs, passwords, or session tokens.
+
+## Organization onboarding and workspaces
+
+The organization foundation migration must already be manually applied to the
+development Supabase project. No migration or RLS change is part of onboarding.
+
+- Authenticated users visiting `/app` with no memberships are redirected on the
+  server to `/onboarding/organization`. Existing members are redirected out of
+  first-organization onboarding.
+- The form suggests a normalized slug from the name until the user edits the
+  slug. Both fields are validated on the server. Creation calls only
+  `create_organization` with `p_name` and `p_slug`; creator identity and owner
+  membership remain database-controlled. Duplicate slugs receive a safe message.
+- One membership enters `/app` automatically. Multiple memberships require a
+  selection on `/organizations` unless a valid saved preference exists. The
+  selector displays each available organization's name, slug, and the caller's role.
+- Selection is saved server-side in the HTTP-only `northstar-organization` cookie
+  (`SameSite=Lax`, Secure in production, 30-day lifetime). It is only a preference.
+  Each use checks freshly loaded, RLS-protected memberships filtered by the
+  server-validated caller ID. An inaccessible saved organization is ignored:
+  the sole remaining membership is selected, or the user must choose again.
+- `/app` shows only organization name, role, email, Sign out, and a Switch
+  organization link when multiple memberships exist. Invitation and organization
+  management remain future work; no dashboard or other product modules are added.
+
+Offline tests mock the Supabase boundary and cover slug/input validation, RPC
+arguments and safe errors, protected routing, invalid preferences, and selection.
+For a manual smoke test, sign in without memberships, create an organization,
+and confirm its owner role appears on `/app`. Try an occupied slug with another
+new account. With independently provisioned test memberships, verify multiple
+workspace selection, switching, and loss of access after membership removal.
+No test setup inserts memberships or changes the live database automatically.

@@ -257,7 +257,9 @@ and has not been automatically applied remotely. It adds profiles (including
 existing-user backfill), organizations, and membership roles. Organization creation
 is a restricted RPC that derives identity from Supabase Auth and creates an owner
 membership atomically. RLS uses a private, owner-executed membership helper to avoid
-recursive policies. Direct membership writes and organization UI are deferred;
+recursive policies. Minimal onboarding and workspace selection now use this RPC
+and revalidate an HTTP-only workspace preference against the caller's memberships.
+Direct membership writes and organization management are deferred;
 the role capabilities described below are planned, not write privileges granted
 by this migration. See the [foundation guide](../database/README.md).
 

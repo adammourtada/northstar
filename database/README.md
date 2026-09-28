@@ -32,12 +32,14 @@ the RLS bypass used by internal helpers are explicit. Do not expose the
 
 `created_by` records the original creator; the `owner` membership represents
 organization ownership. They are set together on creation. There is no owner
-transfer, invitation, membership mutation, or organization UI yet.
+transfer, invitation, or membership mutation yet. Minimal organization onboarding
+and workspace selection use this foundation; see the
+[frontend guide](../apps/web/README.md#organization-onboarding-and-workspaces).
 
 ## Supported creation path
 
 The RPC signature is `public.create_organization(p_name text, p_slug text)` and it
-returns the new organization UUID. Future application code can call:
+returns the new organization UUID. The onboarding server action uses this call:
 
 ```ts
 const { data: organizationId, error } = await supabase.rpc("create_organization", {

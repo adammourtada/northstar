@@ -126,6 +126,14 @@ Expected HTTP 200 response:
 
 Dependencies, build output, Python caches, and `.venv` are excluded by the root `.gitignore`.
 
+### Supabase foundation
+
+Northstar's Supabase browser and server client foundation is available. See the
+[frontend Supabase guide](apps/web/README.md#supabase-foundation) for the required
+local variable names, where to obtain the Project URL and Publishable key, and
+the optional initialization check. Real values belong only in ignored
+`apps/web/.env.local`; never commit that file or expose secret keys in browser code.
+
 ### Continuous integration
 
 GitHub Actions validates pull requests targeting `main` and pushes to `main` with independent frontend and backend jobs. The frontend runs ESLint, TypeScript checks, and a production build; the backend runs pytest. No external services or secrets are required. See [backend testing instructions](services/api/README.md#automated-tests) to run the API tests locally.

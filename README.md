@@ -138,11 +138,20 @@ the optional initialization check. Real values belong only in ignored
 
 The first SQL migration is available under `database/migrations`. It defines
 profiles, organizations, memberships, and a restricted organization-creation RPC.
-It has **not** been automatically applied to any remote Supabase project.
+Migration files are applied manually and are not automatically executed by the repository.
 See the [database foundation guide](database/README.md) for permissions, lifecycle
 decisions, and the manual validation checklist. Minimal organization onboarding and
 workspace selection are available; see the
 [frontend onboarding guide](apps/web/README.md#organization-onboarding-and-workspaces).
+
+### Projects and strategic alignment
+
+The authenticated workspace now links to Projects. Owners/admins/managers can
+create/edit tenant-owned projects and connect them to zero or more strategic
+objectives; members/viewers can read them. The project migration is applied
+manually and is not automatically executed by the repository. See the
+[project development guide](apps/web/README.md#projects-and-strategic-alignment)
+and [database guide](database/README.md#projects-and-strategic-alignment-issue-24).
 
 ### Continuous integration
 

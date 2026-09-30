@@ -158,3 +158,23 @@ The feature requires the separately reviewed
 foundation. It is not applied automatically. Offline tests use mocked Supabase
 boundaries and require no credentials. See the database guide for the manual
 security/browser checklist after eventual application.
+
+## Projects and strategic alignment
+
+`/app` links to `/projects`, with creation at `/projects/new` and editing at
+`/projects/[id]/edit`. All routes use membership-validated current workspace
+selection. Owners/admins/managers manage projects and their objective links;
+members/viewers are read-only. The list shows dates, completion information, and
+linked objective titles without health/alignment scores.
+
+Forms allow zero or more objectives from the current organization. Validation
+errors preserve name, description, priority, status, dates, and selected objectives,
+including through React's automatic form reset. Database RPCs independently
+authorize writes and atomically validate/save same-tenant links. Completion and
+attribution are database-controlled; owner reassignment and deletion are deferred.
+
+The feature requires `database/migrations/202609290002_projects_strategic_alignment.sql`
+after the prior two migrations. Migration files are applied manually and are not
+automatically executed by the repository. `npm test` includes offline input,
+authorization, data-layer, DOM interaction, and static migration security tests.
+See the database guide for the PostgreSQL/browser checks after manual application.

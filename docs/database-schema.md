@@ -5,15 +5,17 @@
 The one-time migration
 [`202609280001_organization_foundation.sql`](../database/migrations/202609280001_organization_foundation.sql)
 implements only `profiles`, `organizations`, and `organization_members` from the
-design below. It has not been automatically applied to any remote Supabase project.
+design below. Migration files are applied manually and are not automatically executed by the repository.
 Profiles extend `auth.users`; an auth trigger creates new profiles and a
 non-overwriting backfill covers existing users. The secure `create_organization`
 RPC derives the creator from `auth.uid()` and atomically assigns them an `owner`
 membership. RLS isolates tenants, while membership mutation remains restricted.
 See the [foundation guide](../database/README.md) for exact grants, validation,
-indexes, and deletion behavior. The separate, unapplied
+indexes, and deletion behavior. The separate
 [`202609290001_strategic_objectives.sql`](../database/migrations/202609290001_strategic_objectives.sql)
-implements strategic objectives as described in section 8. Other tables below remain planned.
+implements strategic objectives as described in section 8.
+[`202609290002_projects_strategic_alignment.sql`](../database/migrations/202609290002_projects_strategic_alignment.sql)
+implements projects and project/objective relationships (sections 9 and 10). Other tables below remain planned.
 
 ## 1. Purpose
 
@@ -296,7 +298,7 @@ This allows:
 
 Stores high-level organizational goals.
 
-Implemented by the separate strategic-objectives migration; not automatically applied.
+Implemented by the separate strategic-objectives migration; migration files are applied manually.
 `organization_id` is the tenant boundary. RLS allows all organization members to
 read. Only owner/admin/manager members can create or update through the secure
 `create_strategic_objective` and `update_strategic_objective` RPCs. Member/viewer
@@ -401,6 +403,7 @@ organization_id
 name
 description
 owner_id
+created_by
 status
 priority
 start_date
@@ -414,16 +417,17 @@ updated_at
 
 | Column | Type | Rules |
 | --- | --- | --- |
-| id | uuid | Primary key |
+| id | uuid | Primary key; default `gen_random_uuid()` |
 | organization_id | uuid | References `organizations.id`; not null |
-| name | text | Not null |
+| name | text | Not null; trimmed and nonempty |
 | description | text | Nullable |
 | owner_id | uuid | Nullable; references `profiles.id` |
-| status | text | Not null |
-| priority | text | Not null |
+| created_by | uuid | Not null; references `profiles.id`; database-controlled creator |
+| status | text | Not null; default `planned`; values below |
+| priority | text | Not null; default `medium`; values below |
 | start_date | date | Nullable |
 | target_date | date | Nullable |
-| completed_at | timestamptz | Nullable |
+| completed_at | timestamptz | Database-controlled; non-null exactly when completed |
 | created_at | timestamptz | Not null; default `now()` |
 | updated_at | timestamptz | Not null; default `now()` |
 
@@ -449,9 +453,28 @@ critical
 
 ### Constraints
 
-- project name cannot be empty
-- target date should not precede start date
-- every project belongs to an organization
+- Name must be nonempty without surrounding whitespace; RPCs trim it.
+- Target date must not precede start date when both exist.
+- Status and priority use exactly the values above.
+- Every project belongs to exactly one organization (`organization_id`).
+- `UNIQUE (organization_id, id)` is the tenant-aware relationship FK target.
+- `completed_at` is non-null exactly when status is `completed`.
+
+### Authorization and completion lifecycle
+
+All organization members can read through RLS. Owners/admins/managers can create
+and update through `create_project` / `update_project`; members/viewers are
+read-only. Authenticated callers have no direct table mutations or deletion.
+The database derives `created_by` and initial `owner_id` from `auth.uid()`; neither
+can be submitted or reassigned. Project organization is immutable through RPCs.
+Parent organization/profile FKs use NO ACTION, preserving major records.
+
+Creating completed or transitioning into completed sets `completed_at` to the
+statement timestamp. Editing a project that stays completed preserves its timestamp.
+Leaving completed clears it; completing again records a new timestamp. Clients do
+not supply it. The existing `set_updated_at()` trigger maintains project timestamps.
+Project fields and replacement objective relationships are saved in one RPC
+transaction, with a row lock serializing updates to the same project.
 
 ---
 
@@ -479,10 +502,10 @@ created_at
 
 | Column | Type | Rules |
 | --- | --- | --- |
-| id | uuid | Primary key |
-| organization_id | uuid | References `organizations.id` |
-| project_id | uuid | References `projects.id` |
-| objective_id | uuid | References `strategic_objectives.id` |
+| id | uuid | Primary key; default `gen_random_uuid()` |
+| organization_id | uuid | Not null; references `organizations.id`; tenant boundary |
+| project_id | uuid | Not null; composite tenant FK to `projects` |
+| objective_id | uuid | Not null; composite tenant FK to `strategic_objectives` |
 | created_at | timestamptz | Not null; default `now()` |
 
 ### Constraint
@@ -491,7 +514,20 @@ created_at
 UNIQUE (project_id, objective_id)
 ```
 
-The same project/objective connection cannot be created twice.
+The same project/objective connection cannot be created twice. Zero links are valid.
+Composite foreign keys enforce same-tenant integrity even for administrative writes:
+
+- `(organization_id, project_id)` references `projects(organization_id, id)`.
+- `(organization_id, objective_id)` references `strategic_objectives(organization_id, id)`.
+
+The new migration adds composite UNIQUE constraints to both parent tables because
+PostgreSQL requires exact unique targets for these FKs. Existing primary keys remain.
+Only junction rows cascade when a parent project/objective is deleted by a trusted
+operator; this issue exposes no deletion workflow. RLS restricts reads to organization
+members. Only the two project RPCs mutate relationships for owner/admin/manager roles.
+They validate every objective against the project's organization, deduplicate IDs,
+and replace links atomically. Foreign, missing, and stale selections fail safely
+without partial projects, partial field updates, or partial relationship changes.
 
 ### Example
 
@@ -1299,21 +1335,23 @@ INDEX strategic_objectives_organization_id_idx (organization_id)
 
 This is the only added objective index beyond the primary key. The initial list
 scopes by organization and has no owner/status filters; those indexes are deferred.
+The project migration additionally creates `strategic_objectives_organization_id_id_key`
+on `(organization_id, id)` solely as the tenant-aware FK target, retaining the existing indexes.
 
 ### projects
 
 ```text
-INDEX projects_organization_id
-INDEX projects_owner_id
-INDEX projects_status
-INDEX projects_target_date
+UNIQUE projects_organization_id_id_key (organization_id, id)
 ```
+
+The project composite UNIQUE also serves tenant list queries; no duplicate
+organization-only index is added.
 
 ### project_objectives
 
 ```text
-INDEX project_objectives_project_id
-INDEX project_objectives_objective_id
+UNIQUE project_objectives_project_objective_key (project_id, objective_id)
+INDEX project_objectives_organization_objective_idx (organization_id, objective_id)
 ```
 
 ### milestones

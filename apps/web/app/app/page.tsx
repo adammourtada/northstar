@@ -25,6 +25,7 @@ export default async function Application({ searchParams }: PageProps<"/app">) {
       <p className="mt-4">Current organization: {organization.name}</p>
       <p className="mt-2">Role: {organization.role}</p>
       <p className="mt-4">Signed in as: {identity.email}</p>
+      <Link href="/projects" className="mt-6 block underline">Projects</Link>
       <Link href="/objectives" className="mt-6 block underline">Strategic Objectives</Link>
       {params.error === "logout" && <p role="alert" className="mt-4 text-red-700">Unable to sign out. Please try again.</p>}
       {organizations.length > 1 && <Link href="/organizations" className="mt-6 inline-block underline">Switch organization</Link>}

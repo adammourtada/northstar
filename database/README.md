@@ -1,8 +1,7 @@
 # Database foundation
 
 `migrations/202609280001_organization_foundation.sql` is a one-time, transactional
-PostgreSQL/Supabase migration. It has **not been automatically applied to any
-remote Supabase project**. No migration runner or live database dependency is
+PostgreSQL/Supabase migration. Migration files are applied manually and are not automatically executed by the repository. No migration runner or live database dependency is
 added to CI. Review before manual application, using the trusted `postgres`
 database role; the migration checks that role so table/function ownership and
 the RLS bypass used by internal helpers are explicit. Do not expose the
@@ -127,7 +126,7 @@ No SQL in this checklist is executed automatically or against a remote project.
 ## Strategic Objectives (issue #22)
 
 `migrations/202609290001_strategic_objectives.sql` is a separate transactional
-migration, prepared but **not applied**. Apply only after the organization
+migration, applied manually and not automatically executed by the repository. Apply only after the organization
 foundation, following independent review as the trusted `postgres` role.
 It creates `strategic_objectives` with tenant ownership, creator attribution,
 initial owner, priority/status, manual progress, optional dates, and timestamps.
@@ -189,3 +188,96 @@ In a disposable test project, after applying manually:
    downgrade membership before submitting, and confirm safe failure messages.
 7. Confirm empty states, read-only navigation, mobile layout, keyboard access,
    and progress display. Verify failed writes leave the stored objective unchanged.
+
+## Projects and strategic alignment (issue #24)
+
+`migrations/202609290002_projects_strategic_alignment.sql` follows the organization
+and strategic-objective migrations. Migration files are applied manually as
+`postgres` and are not automatically executed by the repository. The migration
+does not change the older migration files or weaken existing objective security.
+
+`projects` contains tenant ownership, name/description, initial owner and creator,
+status/priority, dates, completion timestamp, and creation/update timestamps.
+`project_objectives` is a tenant-owned junction containing ID, project ID,
+objective ID, and creation timestamp. See the
+[schema](../docs/database-schema.md#9-projects) for exact columns and constraints.
+
+### RPC contracts and atomicity
+
+- `create_project(p_organization_id uuid, p_name text, p_description text default null,
+  p_status text default 'planned', p_priority text default 'medium',
+  p_start_date date default null, p_target_date date default null,
+  p_objective_ids uuid[] default '{}')` returns the created UUID.
+- `update_project(p_project_id uuid, p_name text, p_description text,
+  p_status text, p_priority text, p_start_date date, p_target_date date,
+  p_objective_ids uuid[])` returns the updated UUID. All editable fields and the
+  complete replacement relationship set are supplied; an empty array clears links.
+
+Both functions require `auth.uid()` and owner/admin/manager membership. They accept
+no user, role, creator, owner, or completion-timestamp parameters. Creation assigns
+both attribution fields to the caller. Update cannot reassign attribution or tenant.
+Completed creation/entry sets `completed_at`; remaining completed preserves it;
+leaving completed clears it. The existing timestamp trigger maintains `updated_at`.
+
+The internal `replace_project_objectives(uuid, uuid, uuid[])` validates every
+objective against the same organization, rejects null/missing/foreign IDs with
+one generic error, deduplicates IDs, then replaces the set. It is SECURITY INVOKER
+with no API-role execution rights and runs only within the definer RPC's transaction.
+Errors propagate without catch-and-continue handling, so failed relationship
+insertion rolls back project creation or the entire update. Update takes a row
+lock to serialize concurrent replacement of the same project's relationships.
+
+### Security review and indexes
+
+- Composite `(organization_id, project_id)` and `(organization_id, objective_id)`
+  FKs enforce same-tenant relationships even for privileged direct writes. Required
+  `(organization_id, id)` UNIQUE targets are added to projects and objectives;
+  the existing objective primary key and security objects remain unchanged.
+- `(project_id, objective_id)` is unique, preventing duplicate links. Its index
+  supports forward lookup; `(organization_id, objective_id)` supports reverse
+  lookup and FK maintenance. The project composite unique index supports tenant
+  lists, so no redundant project organization-only index is added.
+- Project organization/profile references use NO ACTION. Only relationship rows
+  cascade on eventual parent project/objective deletion. No delete RPC/UI exists.
+- Both tables enable RLS with SELECT policies using the existing nonrecursive
+  membership helper. All five membership roles can read their own tenants.
+- PUBLIC/anon have no table access or function execution. Authenticated has SELECT
+  and execution of only the two public RPCs, with no direct INSERT/UPDATE/DELETE.
+  The private `can_manage_projects(uuid)` returns only a boolean for the caller;
+  it has no API-role execution grants. It bypasses membership RLS as postgres.
+- All four new functions use fixed empty search paths and qualified objects.
+  Only authorization and public RPCs use SECURITY DEFINER; all default execution
+  is revoked before intended grants. There is no dynamic SQL or exposed helper.
+- Guessed organization/project IDs cannot grant writes. Missing/foreign projects
+  have the same denial. Missing/foreign objectives have the same denial. Role
+  checks apply even when directly calling the public RPCs.
+- Trusted `service_role` retains administrative table access outside the ordinary
+  user boundary; application code uses only the authenticated server client.
+  No existing grants/policies/functions are weakened, and no data is destroyed.
+
+### Manual validation after application
+
+Offline tests mock application boundaries and statically inspect migration security;
+they do not execute PostgreSQL. After independent review and manual application in
+a disposable test project:
+
+1. Test every role, anonymous callers, and a caller whose membership was removed
+   or downgraded. Try direct RPCs and direct table mutations as well as the UI.
+2. With two tenants, attempt foreign project reads/updates, guessed organization
+   creation, and foreign/missing/null objective IDs. Verify generic errors and no
+   partial project, field, or relationship changes.
+3. Using trusted setup, attempt cross-tenant junction INSERT/UPDATE and duplicates;
+   verify the composite FKs/unique constraint reject them independently of RPCs.
+4. Create with zero, one, multiple, and duplicate IDs. Edit to replace/add/remove
+   links. Verify joined titles and preselected checkboxes, with no foreign choices.
+5. Create completed; transition into completed; edit while completed; leave it;
+   complete again. Verify timestamp set/preserve/clear behavior and updated_at.
+   Attempt spoofed creator/owner/completion/tenant inputs and direct mutations.
+6. Force a relationship-insert failure in disposable setup and verify the entire
+   creation/update rolls back. Test simultaneous updates to one project to confirm
+   field/link sets do not interleave. Verify no recursive RLS errors.
+7. Test empty/error states, keyboard/mobile layouts, repeated invalid-date submits
+   preserving selects/checkboxes, stale selections, and workspace changes in another
+   tab. Confirm success redirects to `/projects` and `/app` context remains intact.
+8. Verify trusted service-role table access, denied private-helper execution, and
+   cascading removal of junction rows only when a parent is administratively deleted.

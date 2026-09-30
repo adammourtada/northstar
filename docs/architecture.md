@@ -253,7 +253,7 @@ Potential future authentication methods include:
 
 The initial database foundation is defined in
 [`database/migrations/202609280001_organization_foundation.sql`](../database/migrations/202609280001_organization_foundation.sql)
-and has not been automatically applied remotely. It adds profiles (including
+and is applied manually, not automatically by the repository. It adds profiles (including
 existing-user backfill), organizations, and membership roles. Organization creation
 is a restricted RPC that derives identity from Supabase Auth and creates an owner
 membership atomically. RLS uses a private, owner-executed membership helper to avoid
@@ -271,7 +271,14 @@ and actions with the authenticated Supabase server client. `/objectives`,
 Reads are tenant-filtered and protected by RLS. Two restricted database RPCs
 derive caller identity and authorize owner/admin/manager writes; member/viewer
 roles remain read-only. No service-role client or FastAPI objective endpoint is
-introduced. The new migration is prepared for manual application only.
+introduced. Migration files are applied manually, not automatically by the repository.
+
+Projects use the same authenticated server client, workspace validation, and role
+model at `/projects`, `/projects/new`, and `/projects/[id]/edit`. Their two RPCs
+save project fields and objective links atomically. Tenant-aware composite foreign
+keys protect both ends of each link. Update locks the project row before replacing
+its links; the database controls creator, initial owner, and completion timestamp.
+No direct application table writes or new FastAPI endpoints are introduced.
 
 Multiple organizations will use the same application while maintaining strict separation between their data.
 

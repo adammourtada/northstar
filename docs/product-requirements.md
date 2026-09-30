@@ -110,6 +110,12 @@ Users can:
 
 ### Strategic Objectives
 
+The initial implementation provides organization-scoped list, create, and edit
+pages. Owners/admins/managers can write; members/viewers can read. The creator
+is database-controlled and is the initial owner; assignment and deletion are
+deferred. Progress is entered manually as an integer from 0 to 100. Projects,
+KPIs, and executive dashboard metrics remain planned.
+
 Users can create objectives containing:
 
 - Title
@@ -119,6 +125,7 @@ Users can create objectives containing:
 - Start date
 - Target date
 - Status
+- Progress percentage
 
 ### Project Portfolio
 

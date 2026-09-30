@@ -143,3 +143,18 @@ and confirm its owner role appears on `/app`. Try an occupied slug with another
 new account. With independently provisioned test memberships, verify multiple
 workspace selection, switching, and loss of access after membership removal.
 No test setup inserts memberships or changes the live database automatically.
+
+## Strategic Objectives
+
+The authenticated workspace links to `/objectives`. The list uses the current
+membership-validated organization and shows priority, status, progress, and dates.
+Owner/admin/manager roles can use `/objectives/new` and `/objectives/[id]/edit`;
+member/viewer roles are read-only. Server actions revalidate context and role,
+validate input, and call secure creation/update RPCs. The database controls creator
+and initial owner. No ownership reassignment or deletion is available.
+
+The feature requires the separately reviewed
+`database/migrations/202609290001_strategic_objectives.sql` after the organization
+foundation. It is not applied automatically. Offline tests use mocked Supabase
+boundaries and require no credentials. See the database guide for the manual
+security/browser checklist after eventual application.

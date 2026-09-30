@@ -11,7 +11,9 @@ non-overwriting backfill covers existing users. The secure `create_organization`
 RPC derives the creator from `auth.uid()` and atomically assigns them an `owner`
 membership. RLS isolates tenants, while membership mutation remains restricted.
 See the [foundation guide](../database/README.md) for exact grants, validation,
-indexes, and deletion behavior. Other tables below remain planned.
+indexes, and deletion behavior. The separate, unapplied
+[`202609290001_strategic_objectives.sql`](../database/migrations/202609290001_strategic_objectives.sql)
+implements strategic objectives as described in section 8. Other tables below remain planned.
 
 ## 1. Purpose
 
@@ -294,6 +296,16 @@ This allows:
 
 Stores high-level organizational goals.
 
+Implemented by the separate strategic-objectives migration; not automatically applied.
+`organization_id` is the tenant boundary. RLS allows all organization members to
+read. Only owner/admin/manager members can create or update through the secure
+`create_strategic_objective` and `update_strategic_objective` RPCs. Member/viewer
+roles are read-only. The database derives `created_by` and the initial `owner_id`
+from `auth.uid()`; neither can be supplied or changed by clients. Organization
+reassignment, ownership reassignment, direct table mutations, and deletion are
+not exposed. Foreign keys use default NO ACTION deletion behavior to preserve
+attribution until a future lifecycle is defined.
+
 ### Table
 
 ```text
@@ -304,8 +316,10 @@ organization_id
 title
 description
 owner_id
+created_by
 priority
 status
+progress_percent
 start_date
 target_date
 created_at
@@ -318,11 +332,13 @@ updated_at
 | --- | --- | --- |
 | id | uuid | Primary key |
 | organization_id | uuid | References `organizations.id`; not null |
-| title | text | Not null |
+| title | text | Not null; nonempty with no surrounding whitespace |
 | description | text | Nullable |
 | owner_id | uuid | Nullable; references `profiles.id` |
-| priority | text | Not null |
-| status | text | Not null |
+| created_by | uuid | Not null; references `profiles.id`; database-controlled creator |
+| priority | text | Not null; default `medium`; constrained to values below |
+| status | text | Not null; default `draft`; constrained to values below |
+| progress_percent | integer | Not null; default 0; between 0 and 100 inclusive |
 | start_date | date | Nullable |
 | target_date | date | Nullable |
 | created_at | timestamptz | Not null; default `now()` |
@@ -349,9 +365,13 @@ cancelled
 
 ### Constraints
 
-- `title` cannot be empty
-- `target_date` should not occur before `start_date`
-- record must belong to an organization
+- `title` cannot be empty or whitespace-only; RPCs trim surrounding whitespace
+- `target_date >= start_date` when both dates exist
+- record must belong to exactly one organization
+- priority/status use only the enumerated values above
+- progress must be an integer from 0 through 100
+- UUID primary key defaults to `gen_random_uuid()`; timestamps default to `now()`
+- INSERT/UPDATE trigger reuses `northstar_private.set_updated_at()`
 
 ### Example
 
@@ -1274,10 +1294,11 @@ UNIQUE (organization_id, user_id)
 ### strategic_objectives
 
 ```text
-INDEX strategic_objectives_organization_id
-INDEX strategic_objectives_owner_id
-INDEX strategic_objectives_status
+INDEX strategic_objectives_organization_id_idx (organization_id)
 ```
+
+This is the only added objective index beyond the primary key. The initial list
+scopes by organization and has no owner/status filters; those indexes are deferred.
 
 ### projects
 

@@ -265,6 +265,14 @@ by this migration. See the [foundation guide](../database/README.md).
 
 Northstar is designed as a multi-tenant SaaS application.
 
+The first Strategic Objectives implementation uses Next.js server components
+and actions with the authenticated Supabase server client. `/objectives`,
+`/objectives/new`, and `/objectives/[id]/edit` reuse validated workspace selection.
+Reads are tenant-filtered and protected by RLS. Two restricted database RPCs
+derive caller identity and authorize owner/admin/manager writes; member/viewer
+roles remain read-only. No service-role client or FastAPI objective endpoint is
+introduced. The new migration is prepared for manual application only.
+
 Multiple organizations will use the same application while maintaining strict separation between their data.
 
 Most organization-owned entities will therefore include:

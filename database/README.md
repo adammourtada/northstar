@@ -123,3 +123,69 @@ test project, verify the following with isolated test users, not production data
    the creation RPC rolls back the organization and any profile repair as well.
 
 No SQL in this checklist is executed automatically or against a remote project.
+
+## Strategic Objectives (issue #22)
+
+`migrations/202609290001_strategic_objectives.sql` is a separate transactional
+migration, prepared but **not applied**. Apply only after the organization
+foundation, following independent review as the trusted `postgres` role.
+It creates `strategic_objectives` with tenant ownership, creator attribution,
+initial owner, priority/status, manual progress, optional dates, and timestamps.
+See [the schema](../docs/database-schema.md#8-strategic_objectives) for columns
+and constraints. Foreign keys use NO ACTION; no deletion lifecycle is added.
+The organization-only index supports the initial tenant-scoped list.
+
+Both RPCs return an objective UUID:
+
+- `create_strategic_objective(p_organization_id uuid, p_title text,
+  p_description text default null, p_priority text default 'medium',
+  p_status text default 'draft', p_progress_percent integer default 0,
+  p_start_date date default null, p_target_date date default null)`.
+- `update_strategic_objective(p_objective_id uuid, p_title text,
+  p_description text, p_priority text, p_status text, p_progress_percent integer,
+  p_start_date date, p_target_date date)` replaces the editable fields only.
+
+### Objective security review
+
+- RLS SELECT uses the unchanged `is_organization_member` helper. Every role can
+  read only joined tenants. There are no INSERT/UPDATE/DELETE policies.
+- PUBLIC/anon have no table or new function privileges. Authenticated receives
+  SELECT and EXECUTE on the two RPCs only; direct mutations are revoked.
+  `service_role` retains trusted administrative table privileges, outside the
+  ordinary-user boundary. Application code uses no service-role credentials.
+- The private `can_manage_objectives(uuid)` boolean helper derives identity from
+  `auth.uid()` and checks membership plus owner/admin/manager role. It has no
+  API-role EXECUTE grants; only the definer RPCs need it. It queries memberships
+  as postgres, avoiding recursive RLS without changing the existing helper.
+- The helper and RPCs use SECURITY DEFINER, fixed empty search paths, qualified
+  objects, and no dynamic SQL. Default EXECUTE is revoked in the transaction.
+- Guessed organization IDs cannot grant writes: the creation RPC checks the
+  caller's membership/role. Update determines the stored organization and checks
+  the same authorization. Missing and inaccessible IDs share one denial message.
+- RPC inputs contain no creator, owner, user, or role fields. Creation sets both
+  attribution IDs to `auth.uid()`; update never changes attribution or tenant.
+  Constraints enforce normalized nonempty titles, enums, progress, and date order.
+- The objective trigger reuses `set_updated_at()` for INSERT/UPDATE. Existing
+  objects and privileges are not altered; no destructive SQL or delete RPC exists.
+
+### Manual validation after eventual application
+
+Offline mocks and static review do not execute PostgreSQL security behavior.
+In a disposable test project, after applying manually:
+
+1. Test anonymous denial and each of owner/admin/manager/member/viewer with real
+   sessions. Verify member/viewer direct RPC calls cannot create or update.
+2. With two isolated tenants, try cross-tenant SELECT, guessed organization
+   creation, and guessed objective update. Compare missing/inaccessible responses.
+3. Try direct table INSERT/UPDATE/DELETE as authenticated, including owners;
+   all must fail. Verify trusted service-role administrative table access.
+4. Confirm creator and owner equal the caller on creation; spoofed RPC arguments,
+   tenant reassignment, and attribution updates must fail. Confirm private helper
+   execution is denied to API roles and membership reads do not recurse.
+5. Exercise every constraint, defaults, nullable dates, whitespace-only titles,
+   progress boundaries, and automatic timestamps through RPCs and trusted setup.
+6. In the browser, create/edit/reload objectives, check validation and pending
+   states, switch workspaces (including another tab with a form open), revoke or
+   downgrade membership before submitting, and confirm safe failure messages.
+7. Confirm empty states, read-only navigation, mobile layout, keyboard access,
+   and progress display. Verify failed writes leave the stored objective unchanged.

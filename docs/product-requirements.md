@@ -113,8 +113,8 @@ Users can:
 The initial implementation provides organization-scoped list, create, and edit
 pages. Owners/admins/managers can write; members/viewers can read. The creator
 is database-controlled and is the initial owner; assignment and deletion are
-deferred. Progress is entered manually as an integer from 0 to 100. Projects,
-KPIs, and executive dashboard metrics remain planned.
+deferred. Progress is entered manually as an integer from 0 to 100. KPIs and
+executive dashboard metrics remain planned.
 
 Users can create objectives containing:
 
@@ -128,6 +128,17 @@ Users can create objectives containing:
 - Progress percentage
 
 ### Project Portfolio
+
+Implemented: organization-scoped project list, create, and edit pages. Owners,
+admins, and managers can manage projects; members and viewers are read-only.
+Creation assigns the authenticated creator as initial owner. Owner reassignment
+and deletion are deferred. Completion timestamps are maintained by the database.
+
+Projects support zero or more strategic objectives through a same-tenant
+many-to-many relationship. Create/edit forms show available objective titles as
+checkboxes; the list displays linked titles or a no-alignment message. Fields,
+selects, and checked objectives survive validation errors. No alignment/health
+scores, milestones, KPIs, risks, dashboards, or AI are implemented by this feature.
 
 Users can create projects containing:
 

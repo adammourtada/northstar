@@ -282,6 +282,12 @@ No direct application table writes or new FastAPI endpoints are introduced.
 
 Multiple organizations will use the same application while maintaining strict separation between their data.
 
+Project detail pages at `/projects/[id]` list milestones. Nested milestone create
+and edit routes use the authenticated Supabase client and restricted database RPCs.
+Reads include both organization and project filters; save actions revalidate the
+workspace, role, parent project, and milestone relationship before calling an RPC.
+The database controls completion timestamps and immutable parent relationships.
+
 Most organization-owned entities will therefore include:
 
 `organization_id`

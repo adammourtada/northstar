@@ -152,6 +152,12 @@ Users can create projects containing:
 
 ### Milestones
 
+Implemented: project detail pages list milestones, with create/edit forms for
+owners, admins, and managers. Members and viewers have read-only access. Progress
+is an integer from 0 to 100; completion forces 100% and records a database-controlled
+timestamp. Reopening clears that timestamp. Deletion and automatic project progress
+calculations are deferred.
+
 Projects can contain measurable milestones with:
 
 - Name

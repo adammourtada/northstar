@@ -549,6 +549,13 @@ This design is more flexible than storing one `objective_id` directly on the pro
 
 Stores measurable project milestones.
 
+Implemented by `202609290003_project_milestones.sql`. `progress_percent` is a
+non-null integer defaulting to 0, constrained to 0–100. A composite foreign key
+on `(organization_id, project_id)` enforces same-tenant parentage. Relationships
+are immutable. Completed milestones have 100% progress and a database-controlled
+completion timestamp; reopening clears the timestamp. Membership RLS permits
+reads, while restricted RPCs authorize owner/admin/manager writes.
+
 ### Table
 
 ```text

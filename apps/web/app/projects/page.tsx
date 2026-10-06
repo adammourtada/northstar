@@ -27,7 +27,7 @@ export default async function Projects() {
       </div> : <ul className="mt-8 space-y-5">
         {projects.map((project) => <li key={project.id} className="rounded-lg border border-gray-200 bg-white p-6">
           <div className="flex items-start justify-between gap-4">
-            <h2 className="break-words text-xl font-semibold">{project.name}</h2>
+            <h2 className="break-words text-xl font-semibold"><Link href={`/projects/${project.id}`} className="underline">{project.name}</Link></h2>
             {canManage && <Link href={`/projects/${project.id}/edit`} className="underline" aria-label={`Edit ${project.name}`}>Edit</Link>}
           </div>
           {project.description && <p className="mt-3 whitespace-pre-wrap break-words text-gray-600">{project.description}</p>}

@@ -1,5 +1,15 @@
 # Database foundation
 
+## Project milestones
+
+After applying the organization, objective, and project migrations, manually apply
+`migrations/202609290003_project_milestones.sql` as `postgres`. It adds tenant-scoped
+milestone reads and restricted create/update RPCs for owners, admins, and managers.
+Completion sets progress to 100 and records the timestamp; reopening clears it.
+Before rollout, verify with separate tenants that foreign projects/milestones are
+inaccessible, members/viewers cannot write, and repeated completion preserves the
+timestamp. Offline application tests do not replace these live RLS checks.
+
 `migrations/202609280001_organization_foundation.sql` is a one-time, transactional
 PostgreSQL/Supabase migration. Migration files are applied manually and are not automatically executed by the repository. No migration runner or live database dependency is
 added to CI. Review before manual application, using the trusted `postgres`

@@ -6,6 +6,8 @@ Notable changes to Northstar will be documented here. No releases have been publ
 
 ### Added
 
+- Organization-scoped KPI definitions, exact decimal targets, reporting configuration, optional objective alignment, secure RPCs, validated create/edit forms, and a migration for manual application. Measurements remain future work.
+
 - Project milestone lists and create/edit forms, role-checked saves, progress validation, completion tracking, and a migration for manual application.
 - Projects with tenant-secure management RPCs, atomic project/objective strategic alignment, completion tracking, and validated forms that preserve submitted values.
 - Initial Strategic Objectives with tenant-scoped lists, authorized creation/editing, progress tracking, secure RPCs, a migration for manual application, and offline tests.

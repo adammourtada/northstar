@@ -929,3 +929,22 @@ Northstar's initial architecture will use:
 | End-to-End Testing | Playwright |
 
 This architecture is intended to support Northstar's MVP while providing a clear path toward a commercial multi-tenant SaaS platform.
+
+## Implemented KPI foundation
+
+KPI definitions use Next.js server components/actions at `/kpis`, `/kpis/new`, and
+`/kpis/[id]/edit`. `lib/kpis.ts` is server-only and reuses membership-validated workspace
+selection and the authenticated Supabase client. Actions revalidate workspace/role,
+check tenant-scoped records and eligible objectives, then call allowlisted secure RPCs.
+Direct create/edit URLs also check permissions. RLS permits member SELECT only;
+owner/admin/manager writes run inside database-authorized definer RPCs with empty
+search paths. A composite objective FK enforces tenant integrity independently.
+Creation assigns the caller as owner; update cannot reassign owner or organization.
+
+Decimal targets stay strings in validation, RPC parameters, and numeric-to-text
+queries, avoiding JavaScript precision loss. Database numeric CHECKs bound absolute
+values below 10^20 and scale to 10 without coercive rounding. No new API endpoints,
+framework, measurement engine, or service-role application client is introduced.
+The one new migration `202609290004_kpis.sql` is for manual application only; offline
+security/route/DOM tests do not establish live Supabase behavior. Measurements and
+all derived KPI intelligence remain future work.

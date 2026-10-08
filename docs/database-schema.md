@@ -15,7 +15,10 @@ indexes, and deletion behavior. The separate
 [`202609290001_strategic_objectives.sql`](../database/migrations/202609290001_strategic_objectives.sql)
 implements strategic objectives as described in section 8.
 [`202609290002_projects_strategic_alignment.sql`](../database/migrations/202609290002_projects_strategic_alignment.sql)
-implements projects and project/objective relationships (sections 9 and 10). Other tables below remain planned.
+implements projects and project/objective relationships (sections 9 and 10).
+`202609290003_project_milestones.sql` implements milestones (section 11).
+`202609290004_kpis.sql` implements KPI definitions (section 12).
+KPI measurements and remaining tables below are planned.
 
 ## 1. Purpose
 
@@ -614,7 +617,17 @@ Project
 
 ## 12. kpis
 
-Stores Key Performance Indicators used to measure organizational performance.
+Stores implemented KPI definitions; no measurement history or current measured values.
+`202609290004_kpis.sql` is applied manually after previous migrations. Membership RLS
+permits tenant reads; only owner/admin/manager RPCs write. Initial owner is auth.uid();
+update cannot reassign owner or tenant. See the database guide for exact RPC grants.
+
+Names/units are nonempty and trimmed, bounded to 200/80 characters; descriptions
+are bounded to 5000. Targets are finite numeric with absolute value below 10^20 and
+scale at most 10, enforced by CHECKs without rounding. The app uses decimal strings
+and reads numeric as text. Frequency is NULL or daily/weekly/monthly/quarterly/annually.
+The existing timestamp trigger maintains updated_at. Composite objective FK references
+`strategic_objectives(organization_id, id)` with NO ACTION deletion behavior.
 
 ### Table
 
@@ -640,17 +653,17 @@ updated_at
 
 | Column | Type | Rules |
 | --- | --- | --- |
-| id | uuid | Primary key |
+| id | uuid | Primary key; default `gen_random_uuid()` |
 | organization_id | uuid | References `organizations.id`; not null |
-| objective_id | uuid | Nullable; references `strategic_objectives.id` |
+| objective_id | uuid | Nullable; composite same-organization FK |
 | name | text | Not null |
 | description | text | Nullable |
-| owner_id | uuid | Nullable; references `profiles.id` |
+| owner_id | uuid | Not null; references `profiles.id`; authenticated initial owner |
 | unit | text | Not null |
 | target_value | numeric | Nullable |
 | direction | text | Not null |
 | reporting_frequency | text | Nullable |
-| status | text | Not null |
+| status | text | Not null; default `active` |
 | created_at | timestamptz | Not null; default `now()` |
 | updated_at | timestamptz | Not null; default `now()` |
 
@@ -704,7 +717,7 @@ Improve Customer Experience
 
 ## 13. kpi_measurements
 
-Stores historical KPI observations.
+Planned, not implemented: stores historical KPI observations.
 
 This allows Northstar to analyze trends rather than storing only one current value.
 
@@ -1373,9 +1386,7 @@ INDEX milestones_due_date
 ### kpis
 
 ```text
-INDEX kpis_organization_id
-INDEX kpis_objective_id
-INDEX kpis_status
+INDEX kpis_organization_objective_idx (organization_id, objective_id)
 ```
 
 ### kpi_measurements

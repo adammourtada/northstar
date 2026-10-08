@@ -113,8 +113,8 @@ Users can:
 The initial implementation provides organization-scoped list, create, and edit
 pages. Owners/admins/managers can write; members/viewers can read. The creator
 is database-controlled and is the initial owner; assignment and deletion are
-deferred. Progress is entered manually as an integer from 0 to 100. KPIs and
-executive dashboard metrics remain planned.
+deferred. Progress is entered manually as an integer from 0 to 100. KPI definitions are
+implemented separately; executive dashboard metrics remain planned.
 
 Users can create objectives containing:
 
@@ -167,14 +167,22 @@ Projects can contain measurable milestones with:
 
 ### KPI Monitoring
 
-Users can define KPIs containing:
+Implemented: organization-scoped KPI definition lists and create/edit forms, with
+owner/admin/manager management and member/viewer read-only access. Definitions include:
 
-- KPI name
-- Target value
-- Current value
-- Measurement unit
-- Reporting frequency
-- Associated strategic objective
+- Name, optional description, and required unit
+- Optional exact decimal target (up to 20 integer and 10 fractional digits)
+- Direction: increase, decrease, or maintain
+- Optional reporting frequency: daily, weekly, monthly, quarterly, or annually
+- Status: active, paused, or archived
+- Optional same-organization strategic objective, whose title appears in the list
+
+Creation assigns the authenticated caller as owner. Forms preserve all submitted
+values after errors and allow clearing objective alignment. Server routes/actions
+and database RPCs enforce authorization; tenant-aware constraints protect relationships.
+Deletion, ownership reassignment, and project-to-KPI links are deferred.
+Measurements, current measured values, trends, charts, performance calculations,
+alerts, and executive dashboards remain planned, rather than implemented.
 
 ### Risk Management
 

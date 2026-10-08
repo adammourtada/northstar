@@ -291,3 +291,73 @@ a disposable test project:
    tab. Confirm success redirects to `/projects` and `/app` context remains intact.
 8. Verify trusted service-role table access, denied private-helper execution, and
    cascading removal of junction rows only when a parent is administratively deleted.
+
+## KPI foundation (issue #27)
+
+`migrations/202609290004_kpis.sql` is exactly one new transactional, forward-only
+migration for manual application as `postgres` after all four previous migrations.
+The objective composite UNIQUE target is supplied by the project migration
+`202609290002_projects_strategic_alignment.sql`; no earlier migration is edited.
+No remote migration or data mutation is performed by the repository.
+
+`kpis` stores definitions only: tenant, optional objective, name/description, initial
+owner, unit, optional numeric target, direction, optional frequency, status, timestamps.
+The composite objective FK enforces the same organization even for trusted direct
+writes, with NO ACTION deletion behavior. `(organization_id, objective_id)` supports
+tenant lists and FK maintenance. The existing `set_updated_at()` trigger is reused.
+Names/units are trimmed and bounded to 200/80 characters; description is bounded
+at 5000. Direction is increase/decrease/maintain; status is active/paused/archived
+(default active); frequency is daily/weekly/monthly/quarterly/annually or NULL.
+Targets use unrestricted numeric plus finite, absolute-value-below-10^20 and
+scale-at-most-10 CHECKs, rejecting excess precision without rounding. Application
+inputs use bounded plain decimal strings and reads cast numeric to text.
+
+Both RPCs return UUIDs:
+
+- `create_kpi(p_organization_id uuid, p_name text, p_unit text, p_direction text,
+  p_description text default null, p_target_value numeric default null,
+  p_reporting_frequency text default null, p_status text default 'active',
+  p_objective_id uuid default null)`.
+- `update_kpi(p_kpi_id uuid, p_name text, p_unit text, p_direction text,
+  p_description text, p_target_value numeric, p_reporting_frequency text,
+  p_status text, p_objective_id uuid)` replaces editable fields; NULL clears alignment.
+
+RLS SELECT calls the existing private membership helper. Authenticated receives
+SELECT only and execution of these two RPCs; direct INSERT/UPDATE/DELETE is denied
+for every ordinary user role. PUBLIC/anon have no privileges. Trusted service_role
+retains administrative table permissions outside the ordinary-user boundary; no
+service-role application client is introduced. The private `can_manage_kpis(uuid)`
+derives auth identity and requires owner/admin/manager membership; API-role execution
+is revoked. All three functions use SECURITY DEFINER and an empty search path.
+Creation independently authorizes the selected tenant and assigns auth.uid() as owner.
+Update locks the authorized row and cannot change organization or owner. Both validate
+optional same-tenant objectives before mutation; missing/foreign relationships share
+one error. Missing/inaccessible KPI IDs share one denial. Errors propagate and roll
+back mutations. No dynamic SQL, delete RPC, or new mutation policies are present.
+
+### Remaining manual verification
+
+Offline tests mock Supabase and inspect SQL; they do not verify live PostgreSQL behavior.
+After independent review and manual application in a disposable test project:
+
+1. Test anonymous denial and each owner/admin/manager/member/viewer session. Invoke
+   RPCs directly; members/viewers must fail. Revoke/downgrade membership before save.
+2. Use two tenants to test SELECT, guessed organization creation, guessed KPI update,
+   missing/foreign objective IDs, and denied direct table INSERT/UPDATE/DELETE.
+   Missing/inaccessible resources must return indistinguishable errors.
+3. With trusted setup, test cross-tenant composite FK rejection, blank names/units,
+   field lengths, enums, nullable targets/frequency, NaN/infinity, numeric size/scale,
+   UUID/default active behavior, and automatic timestamps. Verify initial owner and
+   denied spoofed owner/tenant parameters. Check private-helper execution denial,
+   nonrecursive RLS, and trusted service-role table privileges.
+4. Force a constraint/relationship failure during create/update and verify no partial
+   fields or records remain; existing owner/organization must stay unchanged.
+5. In the browser, create/edit/reload exact decimals (including 20 integer and 10
+   fractional digits), align/clear objectives, and confirm displayed titles and only
+   same-tenant choices. Test repeated validation and database failures preserving all
+   fields, selected values, and malformed numeric text.
+6. Test empty/load-error states, read-only buttons and direct URLs, stale objectives,
+   workspace changes in another tab, keyboard/mobile layout, and pending submits.
+
+Measurements, charts, trends, calculated performance, alerts, dashboards, deletion,
+owner reassignment, and project-to-KPI relationships remain future work.

@@ -156,3 +156,13 @@ and [database guide](database/README.md#projects-and-strategic-alignment-issue-2
 ### Continuous integration
 
 GitHub Actions validates pull requests targeting `main` and pushes to `main` with independent frontend and backend jobs. The frontend runs ESLint, TypeScript checks, and a production build; the backend runs pytest. No external services or secrets are required. See [backend testing instructions](services/api/README.md#automated-tests) to run the API tests locally.
+
+### KPI foundation
+
+The workspace links to `/kpis` for KPI definitions, exact decimal targets,
+reporting frequency, status, direction, and optional strategic objective alignment.
+Owners/admins/managers create and edit; members/viewers read only. Apply the
+separately reviewed `202609290004_kpis.sql` manually after all previous migrations.
+See the [frontend guide](apps/web/README.md#kpi-foundation) and
+[database guide](database/README.md#kpi-foundation-issue-27).
+Measurements, current values, charts, calculations, alerts, and dashboards remain future work.

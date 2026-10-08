@@ -178,3 +178,27 @@ after the prior two migrations. Migration files are applied manually and are not
 automatically executed by the repository. `npm test` includes offline input,
 authorization, data-layer, DOM interaction, and static migration security tests.
 See the database guide for the PostgreSQL/browser checks after manual application.
+
+## KPI foundation
+
+`/kpis`, `/kpis/new`, and `/kpis/[id]/edit` reuse membership-validated workspace
+selection and the authenticated server client. Server routes and actions independently
+check owner/admin/manager access. Members/viewers have read-only lists. Reads filter
+by organization and use RLS; writes call only `create_kpi` and `update_kpi`.
+The list shows name, description, target/unit, direction, reporting frequency,
+status, and objective title. Forms offer only objectives in the selected organization,
+allow clearing alignment, and preserve every field after validation or database errors.
+
+Targets are plain decimal strings with optional minus sign, 1?20 integer digits,
+and optionally 1?10 fractional digits. Exponents, separators, NaN, infinity, and
+partial numbers are rejected. Strings are sent unchanged to PostgreSQL numeric;
+reads select `target_value::text` to avoid JSON number precision loss. No JavaScript
+floating-point conversion occurs. Text limits: name 200, unit 80, description 5000.
+
+Requires manual application of `database/migrations/202609290004_kpis.sql` after
+all four previous migrations. No live database verification is performed by offline
+tests. `npm.cmd` can replace `npm` on Windows with restricted PowerShell execution.
+Input, authenticated-boundary, route/action, DOM reset, and migration tests run via
+`npm test`. Follow the database guide's manual browser/security checklist after review.
+KPI measurements, current values, deletion, owner reassignment, trends, and calculations
+are intentionally deferred.

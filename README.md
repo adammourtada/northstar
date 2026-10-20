@@ -165,4 +165,8 @@ Owners/admins/managers create and edit; members/viewers read only. Apply the
 separately reviewed `202609290004_kpis.sql` manually after all previous migrations.
 See the [frontend guide](apps/web/README.md#kpi-foundation) and
 [database guide](database/README.md#kpi-foundation-issue-27).
-Measurements, current values, charts, calculations, alerts, and dashboards remain future work.
+KPI detail pages now show exact measurement history, target and latest actual values.
+Owners/admins/managers record measurements; members/viewers read history. Review and
+apply `202609290005_kpi_measurements.sql` manually after the KPI foundation migration.
+Latest actual uses measurement time, so backdated entries do not replace newer data.
+Charts, calculations, alerts, and dashboards remain future work.

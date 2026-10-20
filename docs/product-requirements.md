@@ -181,8 +181,13 @@ Creation assigns the authenticated caller as owner. Forms preserve all submitted
 values after errors and allow clearing objective alignment. Server routes/actions
 and database RPCs enforce authorization; tenant-aware constraints protect relationships.
 Deletion, ownership reassignment, and project-to-KPI links are deferred.
-Measurements, current measured values, trends, charts, performance calculations,
-alerts, and executive dashboards remain planned, rather than implemented.
+KPI details now show target and latest actual separately, with exact decimal measurement
+recording and history. Latest means measurement time, with creation time and ID as
+deterministic tie-breakers; backdated entries do not replace newer measurements.
+Owners/admins/managers record; all organization members read their own history.
+Notes are optional (5000 characters). Explicit time-zone offsets are required;
+history displays UTC. Measurement editing/deletion, trends, charts, performance
+calculations, alerts, and executive dashboards remain deferred.
 
 ### Risk Management
 

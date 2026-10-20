@@ -18,7 +18,8 @@ implements strategic objectives as described in section 8.
 implements projects and project/objective relationships (sections 9 and 10).
 `202609290003_project_milestones.sql` implements milestones (section 11).
 `202609290004_kpis.sql` implements KPI definitions (section 12).
-KPI measurements and remaining tables below are planned.
+`202609290005_kpi_measurements.sql` implements measurement history (section 13).
+Remaining tables below are planned.
 
 ## 1. Purpose
 
@@ -617,7 +618,7 @@ Project
 
 ## 12. kpis
 
-Stores implemented KPI definitions; no measurement history or current measured values.
+Stores implemented KPI definitions; historical actual values live in kpi_measurements.
 `202609290004_kpis.sql` is applied manually after previous migrations. Membership RLS
 permits tenant reads; only owner/admin/manager RPCs write. Initial owner is auth.uid();
 update cannot reassign owner or tenant. See the database guide for exact RPC grants.
@@ -717,7 +718,8 @@ Improve Customer Experience
 
 ## 13. kpi_measurements
 
-Planned, not implemented: stores historical KPI observations.
+Implemented by `202609290005_kpi_measurements.sql`, applied manually after the KPI foundation.
+Stores immutable historical observations through the management-only creation RPC.
 
 This allows Northstar to analyze trends rather than storing only one current value.
 
@@ -740,13 +742,13 @@ created_at
 
 | Column | Type | Rules |
 | --- | --- | --- |
-| id | uuid | Primary key |
+| id | uuid | Primary key; default `gen_random_uuid()` |
 | organization_id | uuid | References `organizations.id`; not null |
-| kpi_id | uuid | References `kpis.id`; not null |
-| value | numeric | Not null |
-| measured_at | timestamptz | Not null |
-| recorded_by | uuid | Nullable; references `profiles.id` |
-| notes | text | Nullable |
+| kpi_id | uuid | Not null; composite FK `(organization_id, kpi_id)` references `kpis(organization_id, id)` |
+| value | numeric | Not null; finite, absolute value below 10^20, scale at most 10 |
+| measured_at | timestamptz | Not null; finite instant |
+| recorded_by | uuid | Not null; references `profiles.id`; RPC assigns `auth.uid()` |
+| notes | text | Nullable; at most 5000 characters |
 | created_at | timestamptz | Not null; default `now()` |
 
 ### Example
@@ -1392,18 +1394,12 @@ INDEX kpis_organization_objective_idx (organization_id, objective_id)
 ### kpi_measurements
 
 ```text
-INDEX kpi_measurements_organization_id
-INDEX kpi_measurements_kpi_id
-INDEX kpi_measurements_measured_at
+INDEX kpi_measurements_history_idx
+  (organization_id, kpi_id, measured_at DESC, created_at DESC, id DESC)
 ```
 
-A useful composite index may later include:
-
-```text
-(kpi_id, measured_at)
-```
-
-to efficiently retrieve KPI history.
+Supports tenant-scoped history, latest actual selection, and FK maintenance.
+The measurement migration also adds UNIQUE kpis(organization_id, id) as the FK target.
 
 ### risks
 
@@ -1726,3 +1722,37 @@ The database stores:
 Northstar's business logic transforms that structured data into management intelligence.
 
 AI may explain and summarize those results, but it should not replace the underlying relational data model.
+
+## KPI measurements (issue #30)
+
+KPI names in the list link to `/kpis/[id]`, which shows the definition,
+target and latest actual as separate fields, plus measurement history. A KPI
+without measurements has no invented actual value. Owners, admins, and managers
+can record at `/kpis/[id]/measurements/new`; members and viewers can read history
+but cannot record, including through direct URLs, actions, or the creation RPC.
+
+Measurements use exact plain decimal strings: optional minus sign, 1–20 integer
+digits and up to 10 fractional digits. Values remain strings in forms/RPC payloads
+and are selected as `value::text`. PostgreSQL unrestricted numeric enforces finite
+values, absolute magnitude below 10^20, and scale at most 10 without rounding.
+Zero and negative measurements are valid. Notes are optional, up to 5000 characters.
+
+Input timestamps require an explicit Z or numeric offset, for example
+`2026-10-20T14:30:00-04:00`; ambiguous local times and invalid calendar dates are
+rejected. The submitted instant is preserved and history displays times in UTC.
+History and latest actual use `measured_at DESC, created_at DESC, id DESC`.
+Inserting an older, backdated observation does not replace a newer actual.
+
+The membership-validated current workspace scopes server reads and actions.
+RLS allows SELECT only for organization members. The SECURITY DEFINER creation
+RPC uses an empty search path, checks membership and owner/admin/manager authority,
+checks the selected KPI's organization, and sets `recorded_by = auth.uid()`.
+A composite foreign key prevents cross-tenant KPI associations. Ordinary users
+have no direct INSERT/UPDATE/DELETE privileges and there are no measurement edit
+or delete routes/RPCs. Trusted administrative access follows existing conventions.
+
+Review and manually apply `database/migrations/202609290005_kpi_measurements.sql`
+as `postgres` after all five earlier migrations. Repository checks never apply it.
+No charts, scoring, alerts, thresholds, forecasts, or variance calculations are added.
+Offline tests cover application behavior and SQL contracts; they do not prove live
+Supabase authorization. See the database guide for the remaining manual checks.

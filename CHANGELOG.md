@@ -6,7 +6,9 @@ Notable changes to Northstar will be documented here. No releases have been publ
 
 ### Added
 
-- Organization-scoped KPI definitions, exact decimal targets, reporting configuration, optional objective alignment, secure RPCs, validated create/edit forms, and a migration for manual application. Measurements remain future work.
+- KPI measurement recording and history, exact decimal actuals, target comparison fields, membership-scoped read access and management-only RPC creation, with one migration for manual application.
+
+- Organization-scoped KPI definitions, exact decimal targets, reporting configuration, optional objective alignment, secure RPCs, validated create/edit forms, and a migration for manual application.
 
 - Project milestone lists and create/edit forms, role-checked saves, progress validation, completion tracking, and a migration for manual application.
 - Projects with tenant-secure management RPCs, atomic project/objective strategic alignment, completion tracking, and validated forms that preserve submitted values.

@@ -359,5 +359,72 @@ After independent review and manual application in a disposable test project:
 6. Test empty/load-error states, read-only buttons and direct URLs, stale objectives,
    workspace changes in another tab, keyboard/mobile layout, and pending submits.
 
-Measurements, charts, trends, calculated performance, alerts, dashboards, deletion,
+Charts, trends, calculated performance, alerts, dashboards, deletion,
 owner reassignment, and project-to-KPI relationships remain future work.
+
+## KPI measurements (issue #30)
+
+KPI names in the list link to `/kpis/[id]`, which shows the definition,
+target and latest actual as separate fields, plus measurement history. A KPI
+without measurements has no invented actual value. Owners, admins, and managers
+can record at `/kpis/[id]/measurements/new`; members and viewers can read history
+but cannot record, including through direct URLs, actions, or the creation RPC.
+
+Measurements use exact plain decimal strings: optional minus sign, 1–20 integer
+digits and up to 10 fractional digits. Values remain strings in forms/RPC payloads
+and are selected as `value::text`. PostgreSQL unrestricted numeric enforces finite
+values, absolute magnitude below 10^20, and scale at most 10 without rounding.
+Zero and negative measurements are valid. Notes are optional, up to 5000 characters.
+
+Input timestamps require an explicit Z or numeric offset, for example
+`2026-10-20T14:30:00-04:00`; ambiguous local times and invalid calendar dates are
+rejected. The submitted instant is preserved and history displays times in UTC.
+History and latest actual use `measured_at DESC, created_at DESC, id DESC`.
+Inserting an older, backdated observation does not replace a newer actual.
+
+The membership-validated current workspace scopes server reads and actions.
+RLS allows SELECT only for organization members. The SECURITY DEFINER creation
+RPC uses an empty search path, checks membership and owner/admin/manager authority,
+checks the selected KPI's organization, and sets `recorded_by = auth.uid()`.
+A composite foreign key prevents cross-tenant KPI associations. Ordinary users
+have no direct INSERT/UPDATE/DELETE privileges and there are no measurement edit
+or delete routes/RPCs. Trusted administrative access follows existing conventions.
+
+Review and manually apply `database/migrations/202609290005_kpi_measurements.sql`
+as `postgres` after all five earlier migrations. Repository checks never apply it.
+No charts, scoring, alerts, thresholds, forecasts, or variance calculations are added.
+Offline tests cover application behavior and SQL contracts; they do not prove live
+Supabase authorization. See the database guide for the remaining manual checks.
+
+### Measurement RPC and manual verification
+
+`create_kpi_measurement(p_organization_id uuid, p_kpi_id uuid, p_value numeric,
+p_measured_at timestamptz, p_notes text default null)` returns the new UUID.
+The organization argument is an expected scope, not authorization. No recorder,
+role or user identity argument exists. The composite KPI UNIQUE target and history
+index are added only in the new migration; prior migrations remain unchanged.
+Foreign keys use NO ACTION to preserve historical records.
+
+After independent review and manual migration application in a disposable project:
+
+1. With real anonymous and each of the five role sessions, verify organization
+   SELECT isolation, management-only creation RPC execution, revoked direct table
+   INSERT/UPDATE/DELETE, and denied spoofed recorder arguments.
+2. Use two organizations, including a user with memberships in both, to test
+   foreign/missing KPI IDs and mismatched organization/KPI creation. Verify generic
+   denial and, through trusted setup, composite FK rejection independently of RPCs.
+3. Verify recorder equals the session user. Test membership removal/downgrade
+   before submit, stale workspace forms, denied private management helper execution,
+   and nonrecursive membership RLS.
+4. Exercise numeric bounds, exact 20/10 digit decimals, zero/negative values,
+   NaN/infinity, excessive scale, NULL fields, finite timestamps, and notes limits.
+   Check table constraints on privileged writes without applying numeric typmods.
+5. Record 80 on October 10, 90 on October 15, then backdate 70 to October 5.
+   Verify latest remains 90, history ordering, equal-time tie-breakers, and no
+   update/delete UI or RPC.
+6. In the browser, verify list/detail navigation, empty and load-error states,
+   separate target/actual fields, offsets across daylight-saving transitions,
+   UTC display, keyboard/mobile usability, pending duplicate-submit protection,
+   preserved fields after repeated validation/RPC errors, and success redirects.
+
+None of these live checks is performed by static SQL or mocked application tests.

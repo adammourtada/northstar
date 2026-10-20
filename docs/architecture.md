@@ -946,5 +946,38 @@ queries, avoiding JavaScript precision loss. Database numeric CHECKs bound absol
 values below 10^20 and scale to 10 without coercive rounding. No new API endpoints,
 framework, measurement engine, or service-role application client is introduced.
 The one new migration `202609290004_kpis.sql` is for manual application only; offline
-security/route/DOM tests do not establish live Supabase behavior. Measurements and
-all derived KPI intelligence remain future work.
+security/route/DOM tests do not establish live Supabase behavior. Derived KPI intelligence remains future work; recording/history are described below.
+
+## KPI measurements (issue #30)
+
+KPI names in the list link to `/kpis/[id]`, which shows the definition,
+target and latest actual as separate fields, plus measurement history. A KPI
+without measurements has no invented actual value. Owners, admins, and managers
+can record at `/kpis/[id]/measurements/new`; members and viewers can read history
+but cannot record, including through direct URLs, actions, or the creation RPC.
+
+Measurements use exact plain decimal strings: optional minus sign, 1–20 integer
+digits and up to 10 fractional digits. Values remain strings in forms/RPC payloads
+and are selected as `value::text`. PostgreSQL unrestricted numeric enforces finite
+values, absolute magnitude below 10^20, and scale at most 10 without rounding.
+Zero and negative measurements are valid. Notes are optional, up to 5000 characters.
+
+Input timestamps require an explicit Z or numeric offset, for example
+`2026-10-20T14:30:00-04:00`; ambiguous local times and invalid calendar dates are
+rejected. The submitted instant is preserved and history displays times in UTC.
+History and latest actual use `measured_at DESC, created_at DESC, id DESC`.
+Inserting an older, backdated observation does not replace a newer actual.
+
+The membership-validated current workspace scopes server reads and actions.
+RLS allows SELECT only for organization members. The SECURITY DEFINER creation
+RPC uses an empty search path, checks membership and owner/admin/manager authority,
+checks the selected KPI's organization, and sets `recorded_by = auth.uid()`.
+A composite foreign key prevents cross-tenant KPI associations. Ordinary users
+have no direct INSERT/UPDATE/DELETE privileges and there are no measurement edit
+or delete routes/RPCs. Trusted administrative access follows existing conventions.
+
+Review and manually apply `database/migrations/202609290005_kpi_measurements.sql`
+as `postgres` after all five earlier migrations. Repository checks never apply it.
+No charts, scoring, alerts, thresholds, forecasts, or variance calculations are added.
+Offline tests cover application behavior and SQL contracts; they do not prove live
+Supabase authorization. See the database guide for the remaining manual checks.

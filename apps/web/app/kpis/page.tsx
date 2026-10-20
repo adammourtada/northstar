@@ -27,7 +27,7 @@ export default async function Kpis() {
       </div> : <ul className="mt-8 space-y-5">
         {kpis.map((kpi) => <li key={kpi.id} className="rounded-lg border border-gray-200 bg-white p-6">
           <div className="flex items-start justify-between gap-4">
-            <h2 className="break-words text-xl font-semibold">{kpi.name}</h2>
+            <h2 className="break-words text-xl font-semibold"><Link href={`/kpis/${kpi.id}`} className="underline">{kpi.name}</Link></h2>
             {canManage && <Link href={`/kpis/${kpi.id}/edit`} className="underline" aria-label={`Edit ${kpi.name}`}>Edit</Link>}
           </div>
           {kpi.description && <p className="mt-3 whitespace-pre-wrap break-words text-gray-600">{kpi.description}</p>}

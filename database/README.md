@@ -428,3 +428,77 @@ After independent review and manual migration application in a disposable projec
    preserved fields after repeated validation/RPC errors, and success redirects.
 
 None of these live checks is performed by static SQL or mocked application tests.
+
+## Risk Management (issue #32)
+
+Review and manually apply `migrations/202609290006_risks.sql` as `postgres`
+after `202609290005_kpi_measurements.sql` and all preceding migrations.
+This is one forward-only transactional migration; the repository never applies it.
+Existing migrations, profile privacy policies and membership privileges are unchanged.
+
+It creates `risks`, `risk_projects`, and `risk_objectives`. Risks have a title
+(1–200 trimmed characters), optional description/mitigation plan (5000 characters
+each), optional owner and review date, integer probability/impact (1–5), and status
+open/monitoring/mitigated/accepted/closed (default open). Identified/created times
+default to now; the existing trigger maintains updated_at. RPCs accept no timestamps.
+Review dates are date-only, finite values; risk exposure is calculated in the
+application as probability × impact (1–25), never stored or editable.
+
+The optional owner references profiles and has a composite FK to
+`organization_members(organization_id, user_id)`. Clear/reassign ownership before
+removing that membership; NO ACTION prevents leaving an owner outside the tenant.
+Every project/objective link has same-tenant composite FKs to both parents and a
+unique pair constraint. Junctions cascade only when a parent is administratively
+deleted; risk deletion is not exposed. Risk/organization references use NO ACTION.
+
+RPCs return the saved UUID:
+
+- `create_risk(p_organization_id uuid, p_title text, p_description text,
+  p_owner_id uuid, p_probability integer, p_impact integer, p_status text,
+  p_mitigation_plan text, p_review_date date, p_project_ids uuid[],
+  p_objective_ids uuid[])`.
+- `update_risk(p_risk_id uuid, p_title text, p_description text,
+  p_owner_id uuid, p_probability integer, p_impact integer, p_status text,
+  p_mitigation_plan text, p_review_date date, p_project_ids uuid[],
+  p_objective_ids uuid[])`.
+
+Both require auth.uid() and owner/admin/manager membership. Update derives the
+stored tenant, locks the risk row, and never changes its tenant or identified time.
+Owner membership and every association are independently validated inside the
+database. Missing/foreign associations share safe errors. NULL link arrays or
+NULL elements are invalid; empty arrays clear all links. Duplicates are removed.
+Risk fields and both replacement link sets save in one transaction; any failure
+rolls back all changes. No exception swallowing or partial-save behavior exists.
+
+All three tables have membership-only RLS SELECT. Ordinary authenticated users
+receive SELECT and execution of the two public RPCs only, with no direct table
+INSERT/UPDATE/DELETE. Anonymous/PUBLIC privileges and default function execution
+are revoked. Internal helpers have no API-role execution grants. Definer functions
+have empty search paths and qualified references; link replacement is an internal
+invoker function. Trusted service-role table privileges follow existing conventions;
+application code uses the authenticated server client and no service-role credentials.
+
+Indexes cover tenant lists, owner membership FK maintenance, link uniqueness,
+and project/objective reverse lookups. Existing composite parent UNIQUE keys
+are reused; only risks needs a new (organization_id, id) UNIQUE constraint.
+
+### Manual checks after review and application
+
+Offline mocked tests and SQL contract tests do not establish live PostgreSQL
+authorization. In a disposable project after manual application:
+
+1. Test real owner/admin/manager/member/viewer and anonymous sessions. Confirm
+   member/viewer reads, denied writes/direct create/edit URLs, denied anonymous
+   access, and denied direct table mutations for every ordinary user role.
+2. With two tenants, attempt foreign risk SELECT/update, foreign owner assignment,
+   and foreign project/objective links, including through direct RPC calls.
+   Through trusted setup, confirm all composite FKs reject cross-tenant data.
+3. Create/edit a risk with multiple links; replace/clear both sets and owner.
+   Test missing/removed associations, invalid score/status/length/date values,
+   rollback on invalid links, and preserved identified/created timestamps.
+4. In the browser, check workspace navigation, exposure (3 × 4 = 12), owner choices,
+   linked titles, date-only review display, empty/error states, pending submits,
+   repeated failed-save value preservation, and stale workspace/role changes.
+   Confirm an assigned membership cannot be removed before unassigning its risks.
+
+No live migration, privileged test setup, or browser changes are performed automatically.

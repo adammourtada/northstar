@@ -23,6 +23,7 @@ export function AuthForm({ mode, error, message }: {
         <h1 className="mt-4 text-2xl font-semibold">{title}</h1>
         {error && <p role="alert" className="mt-4 text-sm text-red-700">{errors[error] ?? "Unable to complete authentication. Please try again."}</p>}
         {message === "check-email" && <p role="status" className="mt-4 text-sm text-gray-600">Check your email for a confirmation link. Open it in this same browser to finish signing up.</p>}
+        {message === "password-reset" && <p role="status" className="mt-4 text-sm text-gray-600">Your password has been updated. Sign in with your new password.</p>}
         <form action={isSignup ? signup : login} className="mt-6 space-y-4">
           <label className="block text-sm font-medium">Email
             <input className={inputClass} name="email" type="email" autoComplete="email" required />
@@ -36,6 +37,7 @@ export function AuthForm({ mode, error, message }: {
           {isSignup && <p className="text-sm text-gray-600">We will email you a link to confirm your account.</p>}
           <button className="w-full rounded bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700" type="submit">{title}</button>
         </form>
+        {!isSignup && <p className="mt-4 text-sm"><Link className="underline" href="/forgot-password">Forgot password?</Link></p>}
         <p className="mt-6 text-sm"><Link className="underline" href={isSignup ? "/login" : "/signup"}>{isSignup ? "Already have an account? Sign in" : "Create an account"}</Link></p>
       </section>
     </main>

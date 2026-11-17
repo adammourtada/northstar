@@ -170,3 +170,13 @@ Owners/admins/managers record measurements; members/viewers read history. Review
 apply `202609290005_kpi_measurements.sql` manually after the KPI foundation migration.
 Latest actual uses measurement time, so backdated entries do not replace newer data.
 Charts, calculations, alerts, and dashboards remain future work.
+
+### Risk Management
+
+The workspace links to an organization-scoped risk register, detail pages and
+create/edit forms. Risks support optional owners, probability/impact, calculated
+exposure (1–25), mitigation, review dates, and multiple project/objective links.
+Owners/admins/managers write; members/viewers read only. Review and manually apply
+`202609290006_risks.sql` after the KPI measurement migration. See the
+[frontend guide](apps/web/README.md#risk-management) and
+[database guide](database/README.md#risk-management-issue-32).

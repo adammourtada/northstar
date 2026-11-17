@@ -191,6 +191,23 @@ calculations, alerts, and executive dashboards remain deferred.
 
 ### Risk Management
 
+Implemented: an organization-scoped risk register, details and create/edit routes.
+Owners/admins/managers manage risks; members/viewers read only. Optional owners
+must be current tenant members. Multiple project and strategic objective links
+are supported and may be cleared. Risk fields and associations save atomically.
+
+Probability and impact are integers from 1 to 5; application logic displays
+exposure as their product (1–25). Status is open, monitoring, mitigated, accepted,
+or closed. Description/mitigation are optional, each up to 5000 characters, and
+title is required, up to 200 characters. Review dates are optional date-only values;
+identified and creation/update timestamps are database-controlled.
+Server actions and secure RPCs authorize management; RLS and composite foreign
+keys prevent foreign-tenant reads and associations. Forms preserve submitted values
+after errors. Migration 202609290006_risks.sql requires manual review/application.
+
+Risk deletion, audit timelines, automated alerts, predictions, advanced scoring,
+heatmaps and dashboards are not part of this implementation.
+
 Users can create risks containing:
 
 - Risk name
@@ -199,7 +216,8 @@ Users can create risks containing:
 - Impact
 - Owner
 - Mitigation action
-- Related project or objective
+- Multiple related projects and strategic objectives
+- Status and optional review date
 
 ### Executive Dashboard
 

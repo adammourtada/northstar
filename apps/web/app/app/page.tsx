@@ -25,6 +25,7 @@ export default async function Application({ searchParams }: PageProps<"/app">) {
       <p className="mt-4">Current organization: {organization.name}</p>
       <p className="mt-2">Role: {organization.role}</p>
       <p className="mt-4">Signed in as: {identity.email}</p>
+      <Link href="/risks" className="mt-6 block underline">Risks</Link>
       <Link href="/kpis" className="mt-6 block underline">KPIs</Link>
       <Link href="/projects" className="mt-6 block underline">Projects</Link>
       <Link href="/objectives" className="mt-6 block underline">Strategic Objectives</Link>

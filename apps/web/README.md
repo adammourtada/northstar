@@ -91,6 +91,94 @@ If that cookie is unavailable, the callback shows a safe login error; after emai
 confirmation, try signing in with email/password. Custom SMTP and template
 customization may be added later for production branding.
 
+### Password recovery
+
+Sign in links to `/forgot-password`. The server action calls
+`resetPasswordForEmail` with `/auth/recovery` on the same validated application
+origin. Supabase's default, unmodified Reset Password template uses its
+ConfirmationURL: Supabase verifies the email link and redirects to
+`/auth/recovery?code=...`. Northstar exchanges that code using its PKCE verifier
+cookie, then redirects to `/reset-password`. No template editing or custom SMTP
+is required for this in-app flow. Account existence, mail failures and rate limits
+receive the same generic check-email response. Supabase email rate limits and
+default email-service recipient restrictions still apply.
+
+`/auth/recovery` accepts exactly one credential path:
+
+- A `code` is exchanged using the existing cookie-based PKCE client. Only a
+  recovery exchange is accepted. Open these links in the browser/profile that
+  requested the email, where the verifier cookie exists.
+- A `token_hash` with `type=recovery` is verified with `verifyOtp` using a fixed
+  recovery type. This optional path is for explicitly supplied verified-token
+  links (for example, a future customized template). It is not used or required
+  by the default-template local development flow.
+
+Both paths must establish a session and pass server verification before the
+callback redirects to the fixed `/reset-password` destination. Ambiguous input,
+expired/reused links, missing verifier cookies and provider errors redirect to
+`/forgot-password?error=recovery`. No `next` URL or client-supplied user identity
+is trusted. Callback responses use `private, no-store` and `no-referrer`.
+
+The reset page and password action independently validate Supabase-signed claims
+and fetch the authenticated user from Auth. They require a recovery AMR entry
+issued within the last 15 minutes; ordinary sign-in sessions and user metadata
+cannot authorize this form. Keep `amr` in any custom access-token hook. Session
+refresh does not extend the recovery timestamp. Missing/expired recovery evidence
+requires a new recovery email. This uses Supabase's
+[signed authentication method references](https://supabase.com/docs/guides/auth/jwt-fields#authentication-methods-amrmethod),
+without another signing secret or database state.
+
+New passwords must match and contain 8–128 characters, without trimming.
+Supabase's configured password policy is also enforced by `updateUser`.
+Passwords are never returned in action state or logged. A successful update signs
+out the current session and redirects to sign-in with a success notice. If sign-out
+fails after the update, the UI explicitly reports that the password was saved and
+directs the user to sign out from the workspace.
+
+#### Local development with default Supabase email
+
+1. Under **Authentication > URL Configuration**, keep Site URL at the application's
+   base origin with no trailing slash (`http://localhost:3000` locally; the HTTPS
+   origin in production). Add the exact `/auth/recovery` URL to Redirect URLs.
+   Preserve the existing signup callback allowlist. Production should use exact
+   URLs rather than development wildcards.
+2. Keep the default Supabase email service and the unmodified **Reset Password**
+   template. Do not edit email templates or configure custom SMTP for this flow.
+3. Keep email/password authentication enabled. Request a fresh reset from
+   Northstar's `/forgot-password`, using an address permitted by the default
+   Supabase email service. Open the email in that same browser/profile, on the
+   same application origin (`localhost` and `127.0.0.1` are different origins).
+   Do not clear cookies or switch into a private window between request and click.
+
+#### Dashboard-generated links and limitations
+
+Dashboard-generated recovery emails do not originate from Northstar's PKCE client,
+so there is no matching Northstar verifier cookie. With the default template,
+they normally return to Site URL and can carry implicit-flow tokens in a URL
+fragment (`#access_token=...`). Server route handlers cannot read URL fragments;
+changing Site URL to `/auth/recovery` or `/reset-password` does not solve this.
+Northstar intentionally does not add a browser fragment-token bridge or fall
+back to an unrelated logged-in session.
+
+For local development, ask the recipient to visit `/forgot-password` and request
+a fresh Northstar-initiated email instead of using the dashboard reset email.
+Existing dashboard emails cannot be converted into a PKCE exchange just by
+changing their destination. Cross-browser/device PKCE recovery is likewise not
+supported; request another email in the browser that will open it.
+
+The optional `/auth/recovery?token_hash=...&type=recovery` verification path remains
+available if an explicitly supplied token-hash link is introduced later. The
+default dashboard email does not provide this application callback, and the
+Supabase verification URL's `token` parameter must not simply be renamed to
+`token_hash`. Do not copy email credentials into logs or support messages.
+No service-role credential, database migration or SMTP change is required.
+
+After URL configuration, manually test a fresh in-app reset in the requesting
+browser. Confirm wrong-browser/expired/reused links fail safely and request a new
+link, ordinary signed-in sessions cannot directly use the reset action, and a
+successful change permits sign-in with the new password. Offline tests mock
+Supabase and do not verify email delivery or live tokens.
+
 ### Routes and local smoke test
 
 1. Run `npm run dev`, then visit `/app` while signed out: it redirects to `/login`.
@@ -235,3 +323,36 @@ as `postgres` after all five earlier migrations. Repository checks never apply i
 No charts, scoring, alerts, thresholds, forecasts, or variance calculations are added.
 Offline tests cover application behavior and SQL contracts; they do not prove live
 Supabase authorization. See the database guide for the remaining manual checks.
+
+## Risk Management
+
+The workspace links to `/risks`, an organization-scoped register with exposure,
+owner, status, review date, and linked project/objective titles. Detail pages at
+`/risks/[id]` include the mitigation plan and identified timestamp. Owners,
+admins and managers use `/risks/new` and `/risks/[id]/edit`; members/viewers read
+only. Direct URLs and server actions enforce those roles independently.
+
+Forms support optional owners, multiple projects/objectives, and clearing all links.
+Owner options show membership user IDs and roles: existing profile RLS only
+permits reading one's own profile, so this feature does not expose other members'
+profile names or email addresses. Any current organization member can be assigned,
+without granting additional write permissions.
+
+Title is required (200 characters); description and mitigation plan are optional
+(5000 each). Probability and impact are integers 1–5; exposure is their product,
+1–25, calculated by application logic. Status is open, monitoring, mitigated,
+accepted or closed. Review dates are optional date-only values with no time-zone
+conversion; identified time is database-controlled and shown in UTC.
+All fields, selects and link checkboxes survive failed validation or RPC execution,
+including React's automatic resets. Pending saves disable the submit button.
+
+Reads filter by the membership-validated current workspace and use RLS. Server
+actions reject stale workspace forms and validate owners and links against
+tenant-scoped choices. Secure RPCs independently enforce membership, management
+roles and same-tenant associations, saving fields and links atomically.
+
+Requires manual review/application of
+`database/migrations/202609290006_risks.sql` after the measurement migration.
+See the database guide for deployment and live RLS/RPC checks. Offline tests run
+via `npm test`; they do not prove live Supabase authorization.
+No deletion, risk audit timeline, alerts, predictions, heatmaps or dashboards are added.

@@ -19,7 +19,8 @@ implements projects and project/objective relationships (sections 9 and 10).
 `202609290003_project_milestones.sql` implements milestones (section 11).
 `202609290004_kpis.sql` implements KPI definitions (section 12).
 `202609290005_kpi_measurements.sql` implements measurement history (section 13).
-Remaining tables below are planned.
+`202609290006_risks.sql` implements risks and their associations (sections 14–16).
+Future schema proposals remain marked separately.
 
 ## 1. Purpose
 
@@ -777,7 +778,9 @@ This history can later support:
 
 ## 14. risks
 
-Stores organizational risks.
+Implemented by `202609290006_risks.sql`, applied manually after all preceding migrations.
+Stores tenant-owned risks with owner/admin/manager RPC management and membership RLS reads.
+No deletion or exposure column exists. The RPC does not accept identified/created/updated times.
 
 ### Table
 
@@ -803,17 +806,17 @@ updated_at
 
 | Column | Type | Rules |
 | --- | --- | --- |
-| id | uuid | Primary key |
+| id | uuid | Primary key; default `gen_random_uuid()` |
 | organization_id | uuid | References `organizations.id`; not null |
-| title | text | Not null |
-| description | text | Nullable |
-| owner_id | uuid | Nullable; references `profiles.id` |
-| probability | integer | Not null |
-| impact | integer | Not null |
-| status | text | Not null |
-| mitigation_plan | text | Nullable |
+| title | text | Not null; trimmed, 1–200 characters |
+| description | text | Nullable; at most 5000 characters |
+| owner_id | uuid | Nullable; references profiles and composite same-tenant membership |
+| probability | integer | Not null; 1–5 |
+| impact | integer | Not null; 1–5 |
+| status | text | Not null; default open; enum below |
+| mitigation_plan | text | Nullable; at most 5000 characters |
 | identified_at | timestamptz | Not null; default `now()` |
-| review_date | date | Nullable |
+| review_date | date | Nullable; finite, date-only |
 | created_at | timestamptz | Not null; default `now()` |
 | updated_at | timestamptz | Not null; default `now()` |
 
@@ -838,7 +841,7 @@ impact BETWEEN 1 AND 5
 
 ### Initial Risk Exposure
 
-Northstar may calculate:
+Northstar calculates in application business logic:
 
 ```text
 Risk Exposure = Probability × Impact
@@ -869,7 +872,10 @@ closed
 
 ## 15. risk_projects
 
-Connects risks to projects.
+Implemented junction with organization_id, UUID primary key (default gen_random_uuid),
+required risk/project IDs, and created_at (default now). Composite FKs enforce that
+both parents share the organization; links cascade on administrative parent deletion.
+Membership-only RLS reads and restricted RPC link replacement prevent direct writes.
 
 A risk may affect multiple projects.
 
@@ -897,7 +903,10 @@ UNIQUE (risk_id, project_id)
 
 ## 16. risk_objectives
 
-Connects risks to strategic objectives.
+Implemented junction with organization_id, UUID primary key (default gen_random_uuid),
+required risk/objective IDs, and created_at (default now). Composite FKs enforce that
+both parents share the organization; links cascade on administrative parent deletion.
+Membership-only RLS reads and restricted RPC link replacement prevent direct writes.
 
 ### Table
 
@@ -926,6 +935,12 @@ This allows risks to exist at:
 without forcing every risk into only one category.
 
 ---
+
+Risks add UNIQUE (organization_id, id) for junction FKs. The optional owner has
+a composite FK to organization_members(organization_id, user_id); clear/reassign
+ownership before removing that membership. Owner/profile/organization FKs use NO ACTION.
+Risk updated_at reuses the existing timestamp trigger. Empty arrays clear links;
+NULL arrays/elements and unavailable/foreign owners or links are rejected.
 
 # Entity Relationships
 
@@ -1401,14 +1416,20 @@ INDEX kpi_measurements_history_idx
 Supports tenant-scoped history, latest actual selection, and FK maintenance.
 The measurement migration also adds UNIQUE kpis(organization_id, id) as the FK target.
 
-### risks
+### risks and risk associations
 
 ```text
-INDEX risks_organization_id
-INDEX risks_owner_id
-INDEX risks_status
-INDEX risks_review_date
+UNIQUE risks (organization_id, id)
+INDEX risks_organization_owner_idx (organization_id, owner_id)
+UNIQUE risk_projects (risk_id, project_id)
+INDEX risk_projects_organization_project_idx (organization_id, project_id)
+UNIQUE risk_objectives (risk_id, objective_id)
+INDEX risk_objectives_organization_objective_idx (organization_id, objective_id)
 ```
+
+Indexes support tenant lists, member-owner FK maintenance, link uniqueness, and
+reverse project/objective lookups. The existing project/objective composite
+UNIQUE keys are reused, without duplicate parent indexes.
 
 ---
 

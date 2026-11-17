@@ -981,3 +981,31 @@ as `postgres` after all five earlier migrations. Repository checks never apply i
 No charts, scoring, alerts, thresholds, forecasts, or variance calculations are added.
 Offline tests cover application behavior and SQL contracts; they do not prove live
 Supabase authorization. See the database guide for the remaining manual checks.
+
+## Implemented Risk Management
+
+Risk pages use Next.js server components/actions and the existing membership-validated
+workspace selection at /risks, /risks/new, /risks/[id], and /risks/[id]/edit.
+The server-only risks module uses the authenticated Supabase client; all reads
+are tenant-filtered and RLS-protected. Actions recheck workspace and management
+roles, validate the parent risk and all owner/project/objective choices, and
+call allowlisted create_risk/update_risk RPCs. Error responses preserve submitted
+values and do not expose provider details. No backend API endpoint is required.
+
+Exposure is deterministic application logic (probability × impact), never an
+editable database column. Probability/impact are integers 1–5. Owner assignment
+uses existing organization membership IDs/roles without weakening profile RLS.
+Review dates remain date-only; identified/created/updated times are database-controlled.
+
+Database RPCs use SECURITY DEFINER with empty search paths and derive management
+authority from auth.uid() membership. Update locks the authorized risk row; internal
+link replacement validates and replaces both link sets atomically. Composite FKs
+enforce owner membership and same-tenant links independently of RPC checks.
+RLS permits SELECT to all tenant members; direct writes are revoked and only
+owner/admin/manager roles pass RPC authorization. No delete RPC exists.
+
+Exactly one forward-only migration, 202609290006_risks.sql, follows the measurement
+migration and is applied manually after review. Offline tests cover critical
+input, route/action, form-reset and SQL contracts; real Supabase permissions and
+browser workflows still require the database guide's manual checks. Risk timelines,
+alerts, prediction, advanced scoring, heatmaps and dashboards remain out of scope.
